@@ -37,9 +37,16 @@ escalation. One revision after selection: the base line ended at
 "...now log in as you."; the revision adds the lunch-order kicker, which
 raises the laugh (criterion 2) by landing the disaster on something petty
 and personal instead of stopping at the scale of the breach.
+
+Revision 2 (thinking_revised fix): hardened the writer without touching
+the final line — the line is now rejected if it carries leading/trailing
+whitespace or any control character, the output file is written with an
+explicit newline="\n", and main() returns an int exit code surfaced via
+raise SystemExit(main()).
 """
 
 import os
+import sys
 
 LINE = (
     "I only rotated one password, which is why 63,000 employees now log in "
@@ -47,26 +54,37 @@ LINE = (
 )
 
 
-def main():
+def main() -> int:
     if not LINE or not LINE.strip():
-        raise SystemExit("entry line must not be empty")
+        print("error: entry line must not be empty", file=sys.stderr)
+        return 1
     if "\n" in LINE or "\r" in LINE:
-        raise SystemExit("entry line must be a single line")
+        print("error: entry line must be a single line", file=sys.stderr)
+        return 1
+    if LINE != LINE.strip():
+        print("error: entry line must not have leading or trailing whitespace", file=sys.stderr)
+        return 1
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in LINE):
+        print("error: entry line must not contain control characters", file=sys.stderr)
+        return 1
     if len(LINE) > 140:
-        raise SystemExit("entry line exceeds 140 characters")
+        print("error: entry line exceeds 140 characters", file=sys.stderr)
+        return 1
 
     out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, "entry.txt")
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(LINE + "\n")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8", newline="\n") as f:
         written = f.read()
     if written != LINE + "\n":
-        raise SystemExit("verification failed: entry.txt does not match")
+        print("error: verification failed: entry.txt does not match", file=sys.stderr)
+        return 1
     print("Wrote %s (%d characters)" % (path, len(LINE)))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
