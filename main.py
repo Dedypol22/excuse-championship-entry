@@ -67,6 +67,9 @@ def main() -> int:
     if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in LINE):
         print("error: entry line must not contain control characters", file=sys.stderr)
         return 1
+    if "  " in LINE:
+        print("error: entry line must not contain double spaces", file=sys.stderr)
+        return 1
     if len(LINE) > 140:
         print("error: entry line exceeds 140 characters", file=sys.stderr)
         return 1
